@@ -24,12 +24,27 @@ GitHub Actions builds, tests, and publishes bottles, then verifies a bottle
 installation on fresh Linux and macOS runners. The macOS verification also
 checks bottle selection for Apple Silicon on Golden Gate.
 
-To publish a new batch, update the formula's source URL and checksum or run
-the Homebrew bottles workflow manually. When bumping the source version, remove the previous
-`bottle` block until the new batch is published. Each batch gets an immutable
-GitHub release URL. The workflow validates archive checksums before publishing,
-updates the formula with Homebrew's generated metadata, and verifies the
-published packages with `--force-bottle`.
+Publishing a stable `vMAJOR.MINOR.PATCH` GitHub Release in
+`RadiantAILabs/polaris_code` triggers this tap's workflow. The source repository
+needs the `HOMEBREW_TAP_TOKEN` Actions secret: a fine-grained token restricted
+to this tap with **Actions: write** permission. See the application's
+[release guide](https://github.com/RadiantAILabs/polaris_code/blob/main/docs/publishing.md#one-time-automation-setup)
+for setup. Tag pushes alone do not trigger builds; prereleases are excluded.
+
+The workflow validates the tagged crate version and executable, computes the
+source checksum, and builds both platforms while the live formula keeps its
+current bottles. It publishes immutable release assets and switches the source
+and bottle metadata together after both builds pass. Duplicate notifications
+skip an already bottled release; delayed older releases cannot roll back the
+formula. Queued releases prepare against the latest tap commit and pin their
+builds to that commit.
+
+To replay a notification, run the application's **Homebrew release** workflow
+with `release_tag`. You can also run this tap's **Homebrew bottles** workflow
+with that input; enable `force_rebuild` to replace bottles for the same version.
+An empty tag rebuilds the current formula. After a failure, use **Re-run all
+jobs** so both platforms use the new attempt's immutable release URL. If the
+tap changed during the build, start a new run from the latest `main`.
 
 Update with `brew update && brew upgrade radiantailabs/tap/polaris-code`.
 
