@@ -13,6 +13,11 @@ on:
       - scripts/**
       - .github/workflows/tests.yml
   workflow_dispatch:
+    inputs:
+      verify_only:
+        description: Verify published bottles without rebuilding
+        type: boolean
+        default: false
 
 concurrency:
   group: homebrew-${{ github.ref }}
@@ -29,6 +34,7 @@ env:
 
 jobs:
   build:
+    if: inputs.verify_only != true
     strategy:
       fail-fast: false
       matrix:
@@ -101,6 +107,8 @@ jobs:
             --notes-file "$RUNNER_TEMP/release-assets/release-notes.txt"
       - name: Publish bottle formula
         id: commit
+        env:
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           cd "$(brew --repository radiantailabs/tap)"
@@ -108,10 +116,12 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add Formula/polaris-code.rb
           git commit -m "Publish tested polaris-code bottles."
+          gh auth setup-git --hostname github.com
           git push origin HEAD:main
           echo "tap_commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
   verify:
+    if: always() && !cancelled() && (inputs.verify_only == true || needs.publish.result == 'success')
     needs: publish
     strategy:
       fail-fast: false
@@ -124,10 +134,12 @@ jobs:
       - uses: Homebrew/actions/setup-homebrew@ae72030040bc05e2d65c41c577092cb98bc0a27e
       - name: Install and test published bottle
         env:
-          TAP_COMMIT: ${{ needs.publish.outputs.tap_commit }}
+          GH_TOKEN: ${{ github.token }}
+          TAP_COMMIT: ${{ needs.publish.outputs.tap_commit || github.sha }}
         shell: bash
         run: |
           cd "$(brew --repository radiantailabs/tap)"
+          gh auth setup-git --hostname github.com
           git fetch origin "$TAP_COMMIT"
           git checkout --detach "$TAP_COMMIT"
           brew install --force-bottle "$FORMULA"

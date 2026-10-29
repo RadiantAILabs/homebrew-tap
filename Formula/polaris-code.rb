@@ -5,6 +5,12 @@ class PolarisCode < Formula
   sha256 "90265c5674a2e57b7bac985c34785029ac9643bb1f6392a6e3778854e4cc1034"
   license "Apache-2.0"
 
+  bottle do
+    root_url "https://github.com/RadiantAILabs/homebrew-tap/releases/download/polaris-code-0.1.1-bottles-40908606422-1"
+    sha256 cellar: :any_skip_relocation, arm64_sequoia: "5c2095dba412da6682d11a8362d84bc6d3634d61d68df1917e5cca0609400cab"
+    sha256 cellar: :any,                 x86_64_linux:  "d7512578ca3b2955c632e810866da71126035d0f662799826018f6baf6b72d91"
+  end
+
   depends_on "cmake" => :build
   depends_on "rust" => :build
 
