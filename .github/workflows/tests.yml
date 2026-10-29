@@ -1,0 +1,30 @@
+name: Homebrew
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  install:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-15]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    env:
+      HOMEBREW_NO_ANALYTICS: 1
+      HOMEBREW_MAKE_JOBS: 2
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: Homebrew/actions/setup-homebrew@ae72030040bc05e2d65c41c577092cb98bc0a27e
+      - name: Install and test from source
+        run: |
+          brew install --build-from-source radiantailabs/tap/polaris-code
+          brew test radiantailabs/tap/polaris-code
+          brew audit --strict --online radiantailabs/tap/polaris-code
