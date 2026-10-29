@@ -1,30 +1,142 @@
-name: Homebrew
+name: Homebrew bottles
 
 on:
   push:
     branches: [main]
+    paths:
+      - Formula/**
+      - scripts/**
+      - .github/workflows/tests.yml
   pull_request:
+    paths:
+      - Formula/**
+      - scripts/**
+      - .github/workflows/tests.yml
   workflow_dispatch:
+
+concurrency:
+  group: homebrew-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
 
+env:
+  FORMULA: radiantailabs/tap/polaris-code
+  HOMEBREW_NO_ANALYTICS: "1"
+  HOMEBREW_NO_AUTO_UPDATE: "1"
+  HOMEBREW_MAKE_JOBS: "2"
+
 jobs:
-  install:
+  build:
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-24.04, macos-15]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
-    env:
-      HOMEBREW_NO_ANALYTICS: 1
-      HOMEBREW_MAKE_JOBS: 2
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: Homebrew/actions/setup-homebrew@ae72030040bc05e2d65c41c577092cb98bc0a27e
-      - name: Install and test from source
+      - name: Build and test bottle
+        shell: bash
         run: |
-          brew install --build-from-source radiantailabs/tap/polaris-code
-          brew test radiantailabs/tap/polaris-code
-          brew audit --strict --online radiantailabs/tap/polaris-code
+          brew install --build-bottle "$FORMULA"
+          brew test "$FORMULA"
+          brew linkage --test "$FORMULA"
+          brew audit --strict --online "$FORMULA"
+          version="$(brew info --json=v2 "$FORMULA" | jq -r '.formulae[0].versions.stable')"
+          release_tag="polaris-code-${version}-bottles-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          root_url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${release_tag}"
+          mkdir -p "$RUNNER_TEMP/bottles"
+          cd "$RUNNER_TEMP/bottles"
+          brew bottle --json --no-rebuild --root-url "$root_url" "$FORMULA"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: bottle-${{ matrix.os }}
+          path: |
+            ${{ runner.temp }}/bottles/*.bottle.tar.gz
+            ${{ runner.temp }}/bottles/*.bottle.json
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      actions: read
+      contents: write
+    outputs:
+      tap_commit: ${{ steps.commit.outputs.tap_commit }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: Homebrew/actions/setup-homebrew@ae72030040bc05e2d65c41c577092cb98bc0a27e
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: bottle-*
+          path: ${{ runner.temp }}/bottles
+          merge-multiple: true
+      - name: Validate release assets
+        id: assets
+        run: python3 scripts/prepare-bottles.py "$RUNNER_TEMP/bottles" "$RUNNER_TEMP/release-assets"
+      - name: Merge bottle checksums
+        shell: bash
+        run: |
+          brew trust --formula "$FORMULA"
+          brew bottle --merge --write --no-commit "$RUNNER_TEMP"/bottles/*.bottle.json
+          brew style "$FORMULA"
+          git -C "$(brew --repository radiantailabs/tap)" diff --check
+      - name: Publish immutable bottle assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.assets.outputs.release_tag }}
+          VERSION: ${{ steps.assets.outputs.version }}
+        shell: bash
+        run: |
+          gh release create "$RELEASE_TAG" "$RUNNER_TEMP"/release-assets/*.bottle.tar.gz \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "Homebrew polaris-code ${VERSION}" \
+            --notes-file "$RUNNER_TEMP/release-assets/release-notes.txt"
+      - name: Publish bottle formula
+        id: commit
+        shell: bash
+        run: |
+          cd "$(brew --repository radiantailabs/tap)"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add Formula/polaris-code.rb
+          git commit -m "Publish tested polaris-code bottles."
+          git push origin HEAD:main
+          echo "tap_commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+  verify:
+    needs: publish
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-15]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: Homebrew/actions/setup-homebrew@ae72030040bc05e2d65c41c577092cb98bc0a27e
+      - name: Install and test published bottle
+        env:
+          TAP_COMMIT: ${{ needs.publish.outputs.tap_commit }}
+        shell: bash
+        run: |
+          cd "$(brew --repository radiantailabs/tap)"
+          git fetch origin "$TAP_COMMIT"
+          git checkout --detach "$TAP_COMMIT"
+          brew install --force-bottle "$FORMULA"
+          brew info --json=v2 "$FORMULA" | jq -e '.formulae[0].installed[0].poured_from_bottle == true'
+          brew test "$FORMULA"
+          brew linkage --test "$FORMULA"
+      - name: Verify Apple Silicon Golden Gate bottle selection
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          brew fetch --bottle-tag=arm64_golden_gate "$FORMULA" 2>&1 | tee "$RUNNER_TEMP/golden-gate-fetch.log"
+          grep -F '.arm64_sequoia.bottle' "$RUNNER_TEMP/golden-gate-fetch.log"
