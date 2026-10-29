@@ -150,5 +150,7 @@ jobs:
         if: runner.os == 'macOS'
         shell: bash
         run: |
-          brew fetch --bottle-tag=arm64_golden_gate "$FORMULA" 2>&1 | tee "$RUNNER_TEMP/golden-gate-fetch.log"
-          grep -F '.arm64_sequoia.bottle' "$RUNNER_TEMP/golden-gate-fetch.log"
+          brew fetch --bottle-tag=arm64_golden_gate "$FORMULA"
+          cache_file="$(brew --cache --bottle-tag=arm64_golden_gate "$FORMULA")"
+          test -f "$cache_file"
+          [[ "$cache_file" == *".arm64_sequoia.bottle"* ]]
