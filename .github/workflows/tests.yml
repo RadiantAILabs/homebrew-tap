@@ -150,5 +150,9 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add Formula/polaris-code.rb
+          if git diff --cached --quiet; then
+            echo "Formula for ${VERSION} is already published."
+            exit 0
+          fi
           git commit -m "Publish polaris-code ${VERSION}."
           git push origin HEAD:main
