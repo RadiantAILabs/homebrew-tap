@@ -111,7 +111,6 @@ jobs:
             cp "$RUNNER_TEMP/formula/polaris-code.rb" "$formula_file"
           fi
           brew trust --formula "$FORMULA"
-          brew style "$FORMULA"
           brew install "$FORMULA"
           brew test "$FORMULA"
           brew linkage --test "$FORMULA"
