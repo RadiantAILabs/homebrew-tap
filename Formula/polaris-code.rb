@@ -1,14 +1,14 @@
 class PolarisCode < Formula
   desc "Composable coding agent with replaceable plugins and typed execution graphs"
   homepage "https://github.com/RadiantAILabs/polaris_code"
-  url "https://github.com/RadiantAILabs/polaris_code/archive/refs/tags/v0.1.1.tar.gz"
-  sha256 "90265c5674a2e57b7bac985c34785029ac9643bb1f6392a6e3778854e4cc1034"
+  url "https://github.com/RadiantAILabs/polaris_code/archive/refs/tags/v0.2.0.tar.gz"
+  sha256 "c496a20f68408a4b4d91d3d6f37acc8dd0f0ed5b059585ec96cf6ee6b750234c"
   license "Apache-2.0"
 
   bottle do
-    root_url "https://github.com/RadiantAILabs/homebrew-tap/releases/download/polaris-code-0.1.1-bottles-40920147681-1"
-    sha256 cellar: :any_skip_relocation, arm64_sequoia: "24d4484541107b6c522f9fc45a7bfefb0b0c240bfb5087e3f2b31296c669da18"
-    sha256 cellar: :any,                 x86_64_linux:  "eff478a85768ad037b58ac7a44be2b96d826f92449536a75ceb007225dfa4004"
+    root_url "https://github.com/RadiantAILabs/homebrew-tap/releases/download/polaris-code-0.2.0-bottles-41483782997-1"
+    sha256 cellar: :any_skip_relocation, arm64_sequoia: "f7f309a8a289fbeeafd65fbb15328efc2ea053e3e5aafc878ee1d3f676b7ede5"
+    sha256 cellar: :any,                 x86_64_linux:  "f168087abd74f104d1a81762b20c9d6ce161e9630ef9d0f8eac008e67e3e76b0"
   end
 
   depends_on "cmake" => :build
