@@ -2,7 +2,7 @@
 class PolarisCode < Formula
   desc "Composable coding agent with replaceable plugins and typed execution graphs"
   homepage "https://github.com/RadiantAILabs/polaris_code"
-  version "0.4.2"
+  version "0.4.3"
   license "Apache-2.0"
 
   on_macos do
@@ -10,8 +10,8 @@ class PolarisCode < Formula
     depends_on macos: :sequoia
 
     on_arm do
-      url "https://github.com/RadiantAILabs/polaris_code/releases/download/v0.4.2/polaris-code-0.4.2-aarch64-apple-darwin.tar.gz"
-      sha256 "f49ee56733d2abe5894bb9babe9e974c37c53d1cc3421adb9a0f333a940334a7"
+      url "https://github.com/RadiantAILabs/polaris_code/releases/download/v0.4.3/polaris-code-0.4.3-aarch64-apple-darwin.tar.gz"
+      sha256 "63745a25fd7bfe53001cdccf5f59dc8672efaabb9771e7a02ae81750ea4a390b"
     end
   end
 
@@ -21,8 +21,8 @@ class PolarisCode < Formula
     depends_on "gcc"
 
     on_intel do
-      url "https://github.com/RadiantAILabs/polaris_code/releases/download/v0.4.2/polaris-code-0.4.2-x86_64-unknown-linux-gnu.tar.gz"
-      sha256 "445a6221c26d2f1af7c1dcf2b1c7de19e60eaa852a1947d4f8509d864ac2c711"
+      url "https://github.com/RadiantAILabs/polaris_code/releases/download/v0.4.3/polaris-code-0.4.3-x86_64-unknown-linux-gnu.tar.gz"
+      sha256 "a2168ba739d83239a2e3279e988073ad8bdd9cd4dfa489052068be232aca9ca0"
     end
   end
 
